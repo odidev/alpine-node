@@ -8,13 +8,24 @@ FROM alpine:3.12
 ENV VERSION=v15.11.0 NPM_VERSION=7 YARN_VERSION=v1.22.10
 
 RUN apk upgrade --no-cache -U && \
-  apk add --no-cache curl gnupg libstdc++
+  apk add --no-cache curl gnupg libstdc++  make gcc g++ python3  linux-headers binutils-gold
 
-RUN curl -sfSLO https://unofficial-builds.nodejs.org/download/release/${VERSION}/node-${VERSION}-linux-x64-musl.tar.xz && \
-  curl -sfSLO https://unofficial-builds.nodejs.org/download/release/${VERSION}/SHASUMS256.txt && \
-  grep " node-${VERSION}-linux-x64-musl.tar.xz\$" SHASUMS256.txt | sha256sum -c | grep ': OK$' && \
-  tar -xf node-${VERSION}-linux-x64-musl.tar.xz -C /usr --strip 1 && \
-  rm node-${VERSION}-linux-x64-musl.tar.xz
+RUN if [ `uname -m` = "aarch64" ] ; then  \
+     curl -sfSLO https://nodejs.org/dist/${VERSION}/node-${VERSION}.tar.xz  && \
+     curl -sfSLO https://nodejs.org/dist/${VERSION}/SHASUMS256.txt  && \
+     grep " node-${VERSION}.tar.xz\$" SHASUMS256.txt | sha256sum -c | grep ': OK$' && \
+     tar -xf node-${VERSION}.tar.xz  && \
+     cd node-${VERSION} && \
+     ./configure --prefix=/usr ${CONFIG_FLAGS} && \
+     make  -j$(getconf _NPROCESSORS_ONLN) && \
+     make install; \
+    else  \
+     curl -sfSLO https://unofficial-builds.nodejs.org/download/release/${VERSION}/node-${VERSION}-linux-x64-musl.tar.xz && \
+     curl -sfSLO https://unofficial-builds.nodejs.org/download/release/${VERSION}/SHASUMS256.txt && \
+     grep " node-${VERSION}-linux-x64-musl.tar.xz\$" SHASUMS256.txt | sha256sum -c | grep ': OK$' && \
+     tar -xf node-${VERSION}-linux-x64-musl.tar.xz -C /usr --strip 1 && \
+     rm node-${VERSION}-linux-x64-musl.tar.xz; \
+    fi
 
 RUN npm install -g npm@${NPM_VERSION} && \
   find /usr/lib/node_modules/npm -type d \( -name test -o -name .bin \) | xargs rm -rf
